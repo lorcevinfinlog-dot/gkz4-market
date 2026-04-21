@@ -7,16 +7,16 @@ from flask import Flask, render_template, request, redirect, url_for, session, j
 app = Flask(__name__)
 app.secret_key = 'gkz4_ultra_auto_chat'
 
+# Ссылка на базу из настроек Render
 DATABASE_URL = os.environ.get('DATABASE_URL')
 
 def get_db_connection():
-    conn = psycopg2.connect(DATABASE_URL, sslmode='require')
-    return conn
+    return psycopg2.connect(DATABASE_URL, sslmode='require')
 
 def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
-    # Добавлена колонка balance в таблицу users
+    # Создаем таблицы (добавлены balance и is_read)
     cur.execute('''
         CREATE TABLE IF NOT EXISTS users (
             username TEXT PRIMARY KEY,
@@ -46,31 +46,32 @@ def init_db():
 
 init_db()
 
-# Контекстный процессор теперь передает и баланс пользователя
-@app.context_processor
-def inject_user_data():
-    data = {'unread_count': 0, 'user_balance': 0}
-    if 'user' in session:
-        try:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            # Получаем количество сообщений
-            cur.execute('SELECT COUNT(*) FROM chats WHERE recipient = %s AND is_read = FALSE', (session['user'],))
-            data['unread_count'] = cur.fetchone()[0]
-            # Получаем текущий баланс
-            cur.execute('SELECT balance FROM users WHERE username = %s', (session['user'],))
-            res = cur.fetchone()
-            if res: data['user_balance'] = res[0]
-            cur.close()
-            conn.close()
-        except: pass
-    return data
-
+# ТВОИ ПЛЕЙСЫ (ПОЛНЫЙ СПИСОК)
 GAMES_CONFIG = {
-    "slap": {"name": "Slap Battles", "icon": "🖐️", "currency": "R$", "options": ["Перчатка", "Бейдж", "Фарм"], "hint": "Название перчатки"},
-    "bloxfruits": {"name": "Blox Fruits", "icon": "🍎", "currency": "Бели", "options": ["Фрукт", "Меч", "Прокачка"], "hint": "LVL"},
+    "slap": {"name": "Slap Battles", "icon": "🖐️", "currency": "Слепы / R$", "options": ["Перчатка", "Бейдж", "Фарм"], "hint": "Название перчатки"},
+    "bloxfruits": {"name": "Blox Fruits", "icon": "🍎", "currency": "Бели / R$", "options": ["Фрукт", "Меч", "Прокачка"], "hint": "LVL"},
+    "99nights": {"name": "99 Ночей", "icon": "🌙", "currency": "Гемы", "options": ["Прожить дни", "Геймпас"], "hint": "Кол-во дней"},
+    "garden": {"name": "Вырасти Сад", "icon": "🌱", "currency": "Шейкели", "options": ["Редкое семя", "Аккаунт"], "hint": "Растение"},
+    "adopt": {"name": "Adopt Me!", "icon": "🐶", "currency": "Петы", "options": ["Неон пет", "Мега-неон"], "hint": "Какой пет?"},
+    "ttd": {"name": "Toilet Tower Defense", "icon": "🚽", "currency": "Гемы", "options": ["Юнит", "Мифик"], "hint": "Имя юнита"},
+    "ps99": {"name": "Pet Sim 99", "icon": "🐱", "currency": "Гемы", "options": ["Huge Пет", "Титаник"], "hint": "Имя пета"},
     "robux": {"name": "Робуксы", "icon": "🪙", "currency": "руб.", "options": ["Трансфер (1к3)", "Курс 1к2"], "hint": "Сколько R$?"}
 }
+
+# Чтобы баланс и уведомления были видны на всех страницах
+@app.context_processor
+def inject_user_data():
+    if 'user' in session:
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute('SELECT balance FROM users WHERE username = %s', (session['user'],))
+        res = cur.fetchone()
+        cur.execute('SELECT COUNT(*) FROM chats WHERE recipient = %s AND is_read = FALSE', (session['user'],))
+        unread = cur.fetchone()['count']
+        cur.close()
+        conn.close()
+        return {'user_balance': res['balance'] if res else 0, 'unread_count': unread}
+    return {'user_balance': 0, 'unread_count': 0}
 
 @app.route('/')
 def home():
@@ -86,107 +87,21 @@ def category(game_key):
     conn.close()
     return render_template('category.html', game=GAMES_CONFIG.get(game_key), game_key=game_key, items=items, user=session.get('user'))
 
-# Страница пополнения баланса
-@app.route('/pay', methods=['GET', 'POST'])
-def pay():
-    if 'user' not in session: return redirect(url_for('login'))
-    if request.method == 'POST':
-        amount = int(request.form.get('amount', 0))
-        if amount > 0:
-            conn = get_db_connection()
-            cur = conn.cursor()
-            cur.execute('UPDATE users SET balance = balance + %s WHERE username = %s', (amount, session['user']))
-            conn.commit()
-            cur.close()
-            conn.close()
-            return redirect(url_for('home'))
-    return render_template('pay.html')
-
-# Функция покупки товара
-@app.route('/buy/<int:item_id>')
-def buy_item(item_id):
-    if 'user' not in session: return redirect(url_for('login'))
-    
-    conn = get_db_connection()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    
-    # Ищем товар
-    cur.execute('SELECT * FROM products WHERE id = %s', (item_id,))
-    product = cur.fetchone()
-    
-    if not product:
-        cur.close()
-        conn.close()
-        return "Товар не найден"
-
-    # Извлекаем цену (убираем текст, оставляем только цифры)
-    try:
-        price = int(''.join(filter(str.isdigit, product['price'])))
-    except: price = 0
-
-    # Проверяем баланс покупателя
-    cur.execute('SELECT balance FROM users WHERE username = %s', (session['user'],))
-    buyer_balance = cur.fetchone()['balance']
-
-    if buyer_balance >= price:
-        # 1. Снимаем деньги у покупателя
-        cur.execute('UPDATE users SET balance = balance - %s WHERE username = %s', (price, session['user']))
-        # 2. Начисляем деньги продавцу
-        cur.execute('UPDATE users SET balance = balance + %s WHERE username = %s', (price, product['owner']))
-        # 3. Отправляем авто-сообщение продавцу
-        msg_time = datetime.now().strftime("%H:%M")
-        msg_text = f"🤖 СИСТЕМА: Пользователь {session['user']} купил ваш товар '{product['name']}' за {price} руб. Свяжитесь для передачи!"
-        cur.execute('INSERT INTO chats (sender, recipient, message, time, is_read) VALUES (%s, %s, %s, %s, FALSE)', 
-                    ('SYSTEM', product['owner'], msg_text, msg_time))
-        
-        conn.commit()
-        cur.close()
-        conn.close()
-        return redirect(url_for('chat', recipient=product['owner']))
-    else:
-        cur.close()
-        conn.close()
-        return "Недостаточно средств! Пополните баланс."
-
-# Остальные функции (сообщения, логин и т.д.)
-@app.route('/my_chats')
-def my_chats():
-    if 'user' not in session: return redirect(url_for('login'))
-    user = session['user']
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('SELECT DISTINCT sender FROM chats WHERE recipient = %s UNION SELECT DISTINCT recipient FROM chats WHERE sender = %s', (user, user))
-    interlocutors = [row[0] for row in cur.fetchall()]
-    cur.close()
-    conn.close()
-    return render_template('my_chats.html', interlocutors=interlocutors, user=user)
-
 @app.route('/chat/<recipient>')
 def chat(recipient):
     if 'user' not in session: return redirect(url_for('login'))
     user = session['user']
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
+    # Помечаем сообщения как прочитанные, когда заходим в чат
     cur.execute('UPDATE chats SET is_read = TRUE WHERE sender = %s AND recipient = %s', (recipient, user))
-    conn.commit()
-    cur.execute('SELECT * FROM chats WHERE (sender = %s AND recipient = %s) OR (sender = %s AND recipient = %s) ORDER BY id', (user, recipient, recipient, user))
+    cur.execute('SELECT * FROM chats WHERE (sender = %s AND recipient = %s) OR (sender = %s AND recipient = %s) ORDER BY id', 
+                (user, recipient, recipient, user))
     messages = cur.fetchall()
+    conn.commit()
     cur.close()
     conn.close()
     return render_template('chat.html', recipient=recipient, messages=messages, user=user)
-
-@app.route('/send_message/<recipient>', methods=['POST'])
-def send_message(recipient):
-    if 'user' not in session: return jsonify({"status": "error"}), 403
-    msg_text = request.form.get('text')
-    msg_time = datetime.now().strftime("%H:%M")
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('INSERT INTO chats (sender, recipient, message, time, is_read) VALUES (%s, %s, %s, %s, FALSE)', (session['user'], recipient, msg_text, msg_time))
-    conn.commit()
-    cur.close()
-    conn.close()
-    return jsonify({"sender": session['user'], "message": msg_text, "time": msg_time})
 
 @app.route('/get_unread_count')
 def get_unread_count():
@@ -199,6 +114,47 @@ def get_unread_count():
         conn.close()
         return jsonify({"unread_count": count})
     return jsonify({"unread_count": 0})
+
+@app.route('/send_message/<recipient>', methods=['POST'])
+def send_message(recipient):
+    if 'user' not in session: return jsonify({"status": "error"}), 403
+    msg_text = request.form.get('text')
+    msg_time = datetime.now().strftime("%H:%M")
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('INSERT INTO chats (sender, recipient, message, time) VALUES (%s, %s, %s, %s)',
+                (session['user'], recipient, msg_text, msg_time))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return jsonify({"from": session['user'], "text": msg_text, "time": msg_time})
+
+@app.route('/add/<game_key>', methods=['POST'])
+def add_item(game_key):
+    if 'user' not in session: return redirect(url_for('login'))
+    name = f"{request.form.get('item_type')}: {request.form.get('custom_info')}"
+    price = f"{request.form.get('price')} {GAMES_CONFIG[game_key]['currency']}"
+    img = request.form.get('img') or "https://via.placeholder.com/200/222/fff?text=Gkz4"
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('INSERT INTO products (category, name, price, img, owner) VALUES (%s, %s, %s, %s, %s)',
+                (game_key, name, price, img, session['user']))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(url_for('category', game_key=game_key))
+
+@app.route('/my_chats')
+def my_chats():
+    if 'user' not in session: return redirect(url_for('login'))
+    user = session['user']
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('SELECT DISTINCT sender FROM chats WHERE recipient = %s UNION SELECT DISTINCT recipient FROM chats WHERE sender = %s', (user, user))
+    interlocutors = [row[0] for row in cur.fetchall()]
+    cur.close()
+    conn.close()
+    return render_template('my_chats.html', interlocutors=interlocutors, user=user)
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -231,6 +187,17 @@ def register():
             cur.close()
             conn.close()
     return render_template('register.html')
+
+@app.route('/delete/<int:item_id>')
+def delete_item(item_id):
+    if 'user' not in session: return redirect(url_for('login'))
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('DELETE FROM products WHERE id = %s AND owner = %s', (item_id, session['user']))
+    conn.commit()
+    cur.close()
+    conn.close()
+    return redirect(request.referrer or url_for('home'))
 
 @app.route('/logout')
 def logout(): 
