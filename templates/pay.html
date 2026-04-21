@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Пополнение баланса | GKZ4</title>
+    <style>
+        body { background: #0b0b0b; color: #fff; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .pay-card { background: #111; padding: 30px; border-radius: 20px; border: 1px solid #222; width: 350px; text-align: center; }
+        input { width: 100%; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 10px; margin: 15px 0; box-sizing: border-box; }
+        .methods { display: flex; gap: 10px; justify-content: center; margin-bottom: 20px; }
+        .method { padding: 10px; border: 1px solid #333; border-radius: 10px; cursor: pointer; font-size: 12px; flex: 1; }
+        .method:hover { border-color: #ff8c00; }
+        button { background: #ff8c00; border: none; width: 100%; padding: 15px; border-radius: 10px; font-weight: bold; cursor: pointer; }
+        .back { display: block; margin-top: 15px; color: #555; text-decoration: none; font-size: 13px; }
+    </style>
+</head>
+<body>
+    <div class="pay-card">
+        <h2>Пополнение</h2>
+        <p style="color: #666; font-size: 14px;">Ваш баланс: {{ user_balance }} руб.</p>
+        
+        <form method="POST">
+            <div class="methods">
+                <div class="method">💳 Карты</div>
+                <div class="method">📲 СБП</div>
+                <div class="method">₿ Крипта</div>
+            </div>
+            <input type="number" name="amount" placeholder="Сумма (от 10 руб.)" required min="10">
+            <button type="submit">ОПЛАТИТЬ</button>
+        </form>
+        
+        <a href="/" class="back">← На главную</a>
+    </div>
+</body>
+</html>

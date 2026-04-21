@@ -17,21 +17,23 @@
         .item img { width: 100%; height: 140px; object-fit: cover; }
         .price { color: #ff8c00; font-size: 18px; font-weight: 800; padding: 5px 0; }
         
-        /* Кнопка чата */
-        .btn-chat { 
-            background: #ff8c00; 
-            color: #000; 
-            text-decoration: none; 
+        /* Кнопки действий */
+        .btn-chat, .btn-buy { 
             display: block; 
             text-align: center; 
             padding: 10px; 
             border-radius: 12px; 
             font-weight: bold; 
             font-size: 13px; 
-            margin-top: 10px;
+            margin-top: 8px;
+            text-decoration: none;
             transition: 0.2s;
         }
-        .btn-chat:hover { background: #e67e00; transform: translateY(-2px); }
+        .btn-chat { background: #222; color: #fff; border: 1px solid #333; }
+        .btn-chat:hover { background: #333; }
+        
+        .btn-buy { background: #28a745; color: #fff; }
+        .btn-buy:hover { background: #218838; transform: translateY(-2px); box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3); }
         
         .del-btn { background: #ff4444; color: #fff; border: none; padding: 5px 10px; border-radius: 8px; cursor: pointer; position: absolute; top: 10px; right: 10px; font-size: 10px; text-decoration: none; z-index: 5; }
         .owner-tag { font-size: 11px; color: #555; margin-top: 5px; }
@@ -90,12 +92,13 @@
 
                 {% if user %}
                     {% if item.owner != user %}
-                        <a href="/chat/{{ item.owner }}" class="btn-chat">💬 ЧАТ С ПРОДАВЦОМ</a>
+                        <a href="/buy/{{ item.id }}" class="btn-buy" onclick="return confirm('Вы уверены, что хотите купить этот товар?')">💰 КУПИТЬ</a>
+                        <a href="/chat/{{ item.owner }}" class="btn-chat">💬 ЧАТ</a>
                     {% else %}
                         <div style="text-align: center; color: #333; font-size: 11px; margin-top: 15px; border: 1px dashed #222; padding: 8px; border-radius: 10px;">Ваш товар</div>
                     {% endif %}
                 {% else %}
-                    <a href="/login" class="btn-chat">ВОЙТИ ДЛЯ ПОКУПКИ</a>
+                    <a href="/login" class="btn-buy">ВОЙТИ ДЛЯ ПОКУПКИ</a>
                 {% endif %}
             </div>
         </div>
