@@ -2,95 +2,21 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Мои сообщения | Gkz4</title>
     <style>
-        body { background: #0b0b0b; color: #fff; font-family: 'Segoe UI', sans-serif; padding: 20px; margin: 0; }
-        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-        .nav-back { color: #555; text-decoration: none; font-size: 14px; display: block; margin-bottom: 20px; transition: 0.2s; }
-        .nav-back:hover { color: #ff8c00; }
-        
-        h1 { font-size: 24px; margin-bottom: 30px; }
-
-        .chat-card { 
-            background: #111; 
-            padding: 15px 20px; 
-            border-radius: 16px; 
-            border: 1px solid #222; 
-            margin-bottom: 12px; 
-            display: flex; 
-            justify-content: space-between; 
-            align-items: center; 
-            text-decoration: none; 
-            color: #fff; 
-            transition: all 0.3s ease;
-        }
-        
-        .chat-card:hover { 
-            border-color: #ff8c00; 
-            background: #181818; 
-            transform: translateX(5px);
-            box-shadow: 0 4px 15px rgba(255, 140, 0, 0.1);
-        }
-
-        .user-info { display: flex; align-items: center; gap: 15px; }
-        
-        /* Круглая аватарка как в ТГ */
-        .avatar { 
-            width: 45px; 
-            height: 45px; 
-            background: linear-gradient(135deg, #ff8c00, #ff5f00); 
-            border-radius: 50%; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center; 
-            font-weight: bold; 
-            font-size: 18px; 
-            color: #000;
-        }
-
-        .name-box { display: flex; flex-direction: column; }
-        .username { font-weight: bold; font-size: 16px; }
-        .status { font-size: 12px; color: #555; }
-
-        .btn-open { 
-            background: rgba(255, 140, 0, 0.1); 
-            color: #ff8c00; 
-            padding: 8px 16px; 
-            border-radius: 10px; 
-            font-size: 12px; 
-            font-weight: bold; 
-            border: 1px solid #ff8c00;
-            transition: 0.2s;
-        }
-        .chat-card:hover .btn-open { background: #ff8c00; color: #000; }
-
-        .empty { text-align: center; color: #444; margin-top: 50px; }
+        body { background: #0b0b0b; color: #fff; font-family: sans-serif; padding: 20px; }
+        .chat-card { background: #111; padding: 15px; border-radius: 12px; border: 1px solid #222; margin-bottom: 10px; display: flex; justify-content: space-between; text-decoration: none; color: #fff; }
+        .chat-card:hover { border-color: #ff8c00; }
+        .btn { background: #ff8c00; color: #000; padding: 5px 15px; border-radius: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="container">
-        <a href="/" class="nav-back">← Вернуться на маркет</a>
-        <h1>Ваши диалоги</h1>
-        
-        {% if interlocutors %}
-            {% for other in interlocutors %}
-            <a href="/chat/{{ other }}" class="chat-card">
-                <div class="user-info">
-                    <div class="avatar">{{ other[0].upper() }}</div>
-                    <div class="name-box">
-                        <span class="username">@{{ other }}</span>
-                        <span class="status">Нажми, чтобы открыть чат</span>
-                    </div>
-                </div>
-                <span class="btn-open">ОТКРЫТЬ</span>
-            </a>
-            {% endfor %}
-        {% else %}
-            <div class="empty">
-                <p style="font-size: 40px;">✉️</p>
-                <p>У вас пока нет чатов.<br>Напишите продавцу под любым товаром!</p>
-            </div>
-        {% endif %}
-    </div>
+    <a href="/" style="color: #555; text-decoration: none;">← На главную</a>
+    <h1>Мои чаты</h1>
+    {% for other in interlocutors %}
+    <a href="/chat/{{ other }}" class="chat-card">
+        <span>Переписка с <b>@{{ other }}</b></span>
+        <span class="btn">Открыть</span>
+    </a>
+    {% endfor %}
 </body>
 </html>

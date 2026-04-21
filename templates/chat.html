@@ -5,52 +5,40 @@
     <title>Чат с {{ recipient }}</title>
     <style>
         body { background: #0b0b0b; color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; display: flex; flex-direction: column; height: 100vh; }
+        .head { background: #111; padding: 15px 20px; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; }
+        .back-btn { color: #ff8c00; text-decoration: none; font-weight: bold; }
         
-        /* Шапка чата */
-        .head { background: #111; padding: 15px 20px; border-bottom: 1px solid #222; display: flex; align-items: center; gap: 15px; }
-        .back-btn { color: #ff8c00; text-decoration: none; font-weight: bold; font-size: 20px; }
-        .avatar { width: 35px; height: 35px; background: #ff8c00; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #000; font-weight: bold; }
+        #chat-window { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; background: #0d0d0d; }
         
-        /* Окно сообщений */
-        #chat-window { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 8px; background: #0d0d0d; }
+        .m { max-width: 75%; padding: 10px 15px; border-radius: 12px; font-size: 14px; position: relative; line-height: 1.4; }
+        .my { align-self: flex-end; background: #ff8c00; color: #000; border-bottom-right-radius: 2px; }
+        .his { align-self: flex-start; background: #222; color: #fff; border-bottom-left-radius: 2px; }
+        .t { font-size: 9px; opacity: 0.6; text-align: right; margin-top: 4px; }
         
-        /* Пузыри сообщений */
-        .m { max-width: 75%; padding: 10px 14px; border-radius: 18px; font-size: 14px; line-height: 1.4; position: relative; animation: fadeIn 0.3s ease; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-        
-        .my { align-self: flex-end; background: #ff8c00; color: #000; border-bottom-right-radius: 4px; }
-        .his { align-self: flex-start; background: #222; color: #fff; border-bottom-left-radius: 4px; }
-        
-        .t { font-size: 10px; opacity: 0.5; margin-top: 4px; display: block; text-align: right; }
-        .my .t { color: #000; }
-
-        /* Поле ввода */
-        .input-area { background: #111; padding: 15px 20px; display: flex; gap: 12px; border-top: 1px solid #222; }
-        input { flex: 1; background: #1a1a1a; border: 1px solid #333; color: #fff; padding: 12px 18px; border-radius: 25px; outline: none; transition: 0.2s; }
-        input:focus { border-color: #ff8c00; background: #222; }
-        button { background: #ff8c00; border: none; padding: 0 25px; border-radius: 25px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        button:hover { background: #e67e00; transform: scale(1.05); }
+        .input-area { background: #111; padding: 15px; display: flex; gap: 10px; border-top: 1px solid #222; }
+        input { flex: 1; background: #000; border: 1px solid #333; color: #fff; padding: 12px; border-radius: 10px; outline: none; }
+        button { background: #ff8c00; border: none; padding: 0 25px; border-radius: 10px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
 
     <div class="head">
-        <a href="/my_chats" class="back-btn">←</a>
-        <div class="avatar">{{ recipient[0].upper() }}</div>
+        <a href="/my_chats" class="back-btn">← Назад</a>
         <span>Чат с <b style="color: #ff8c00;">{{ recipient }}</b></span>
+        <div style="width: 50px;"></div>
     </div>
 
     <div id="chat-window">
         {% for m in messages %}
-            <div class="m {% if m.sender == user %}my{% else %}his{% endif %}">
-                {{ m.message }}
-                <span class="t">{{ m.time }}</span>
+            <div class="m {% if m.from == user %}my{% else %}his{% endif %}">
+                {{ m.text }}
+                <div class="t">{{ m.time }}</div>
             </div>
         {% endfor %}
     </div>
 
     <form id="chat-form" class="input-area">
-        <input type="text" id="msg-input" placeholder="Написать сообщение..." required autocomplete="off">
+        <input type="text" id="msg-input" placeholder="Введите сообщение..." required autocomplete="off">
         <button type="submit">ОТПРАВИТЬ</button>
     </form>
 
@@ -59,11 +47,13 @@
         const chatForm = document.getElementById('chat-form');
         const msgInput = document.getElementById('msg-input');
 
+        // Прокрутка вниз
         function scrollDown() {
             chatWin.scrollTop = chatWin.scrollHeight;
         }
         scrollDown();
 
+        // ФОНОВОЕ ОБНОВЛЕНИЕ ЧАТА
         async function updateChat() {
             try {
                 const response = await fetch('/chat/{{ recipient }}');
@@ -73,15 +63,18 @@
                 const newDoc = parser.parseFromString(html, 'text/html');
                 const newContent = newDoc.getElementById('chat-window').innerHTML;
                 
-                if (chatWin.innerHTML.trim() !== newContent.trim()) {
+                // Если контент изменился (пришло новое сообщение)
+                if (chatWin.innerHTML !== newContent) {
                     chatWin.innerHTML = newContent;
                     scrollDown();
                 }
             } catch (err) { console.error("Ошибка обновления:", err); }
         }
 
+        // Проверять новые сообщения каждые 2 секунды
         setInterval(updateChat, 2000);
 
+        // ОТПРАВКА СООБЩЕНИЯ (БЕЗ ПЕРЕЗАГРУЗКИ)
         chatForm.onsubmit = async (e) => {
             e.preventDefault();
             const text = msgInput.value.trim();
@@ -89,15 +82,16 @@
 
             const data = new FormData();
             data.append('text', text);
-            msgInput.value = ''; 
+
+            msgInput.value = ''; // Очистить поле ввода
 
             try {
                 await fetch('/send_message/{{ recipient }}', {
                     method: 'POST',
                     body: data
                 });
-                updateChat(); 
-            } catch (err) { alert("Ошибка сети!"); }
+                updateChat(); // Сразу обновить чат после отправки
+            } catch (err) { alert("Ошибка при отправке!"); }
         };
     </script>
 </body>
