@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gkz4 Market | Магазин игровых ценностей</title>
+    <style>
+        :root { --main-color: #ff8c00; --bg: #0b0b0b; --card: #111; }
+        body { background: var(--bg); color: #fff; font-family: 'Segoe UI', sans-serif; margin: 0; padding: 0; }
+        
+        /* Шапка сайта */
+        header { background: #111; padding: 15px 5%; border-bottom: 1px solid #222; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 100; }
+        .logo { font-size: 24px; font-weight: 900; color: var(--main-color); text-decoration: none; letter-spacing: 1px; }
+        .user-nav { display: flex; align-items: center; gap: 20px; }
+        .nav-link { color: #fff; text-decoration: none; font-size: 14px; transition: 0.2s; }
+        .nav-link:hover { color: var(--main-color); }
+        .btn-msg { background: rgba(255, 140, 0, 0.1); border: 1px solid var(--main-color); color: var(--main-color); padding: 8px 15px; border-radius: 10px; font-weight: bold; }
+        .btn-auth { background: var(--main-color); color: #000; padding: 8px 20px; border-radius: 10px; font-weight: bold; }
+
+        /* Контент */
+        .container { max-width: 1200px; margin: 40px auto; padding: 0 20px; }
+        h1 { font-size: 32px; margin-bottom: 10px; }
+        p.subtitle { color: #666; margin-bottom: 40px; }
+
+        /* Сетка игр */
+        .game-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 20px; }
+        .game-card { background: var(--card); border: 1px solid #222; border-radius: 20px; padding: 25px; text-decoration: none; color: #fff; transition: 0.3s; position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; text-align: center; }
+        .game-card:hover { border-color: var(--main-color); transform: translateY(-5px); background: #161616; }
+        .game-icon { font-size: 50px; margin-bottom: 15px; }
+        .game-name { font-size: 20px; font-weight: bold; margin-bottom: 5px; }
+        .game-cur { font-size: 12px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .badge { position: absolute; top: 15px; right: 15px; background: var(--main-color); color: #000; font-size: 10px; font-weight: bold; padding: 3px 8px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+
+<header>
+    <a href="/" class="logo">GKZ4 MARKET</a>
+    
+    <div class="user-nav">
+        {% if user %}
+            <a href="/my_chats" class="nav-link btn-msg">✉️ СООБЩЕНИЯ</a>
+            <span class="nav-link">Привет, <b>{{ user }}</b></span>
+            <a href="/logout" class="nav-link" style="color: #ff4444;">Выйти</a>
+        {% else %}
+            <a href="/login" class="nav-link">Вход</a>
+            <a href="/register" class="nav-link btn-auth">Регистрация</a>
+        {% endif %}
+    </div>
+</header>
+
+<div class="container">
+    <h1>Выберите игру</h1>
+    <p class="subtitle">Покупайте и продавайте игровые предметы безопасно</p>
+
+    <div class="game-grid">
+        {% for key, game in games.items() %}
+        <a href="/category/{{ key }}" class="game-card">
+            <div class="badge">ACTIVE</div>
+            <div class="game-icon">{{ game.icon }}</div>
+            <div class="game-name">{{ game.name }}</div>
+            <div class="game-cur">Валюта: {{ game.currency }}</div>
+        </a>
+        {% endfor %}
+    </div>
+</div>
+
+<footer style="margin-top: 100px; padding: 40px; text-align: center; color: #333; border-top: 1px solid #111;">
+    &copy; 2026 Gkz4 Market. Все права защищены.
+</footer>
+
+</body>
+</html>
