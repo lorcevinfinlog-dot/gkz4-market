@@ -37,7 +37,8 @@ def init_db():
             sender TEXT,
             recipient TEXT,
             message TEXT,
-            time TEXT
+            time TEXT,
+            is_read BOOLEAN DEFAULT FALSE
         );
     ''')
     conn.commit()
@@ -46,6 +47,23 @@ def init_db():
 
 # Запускаем создание таблиц
 init_db()
+
+# Контекстный процессор для счетчика уведомлений на всех страницах
+@app.context_processor
+def inject_unread_count():
+    if 'user' in session:
+        try:
+            conn = get_db_connection()
+            cur = conn.cursor()
+            # Считаем сообщения, которые прислали НАМ, и которые еще не прочитаны
+            cur.execute('SELECT COUNT(*) FROM chats WHERE recipient = %s AND is_read = FALSE', (session['user'],))
+            count = cur.fetchone()[0]
+            cur.close()
+            conn.close()
+            return {'unread_count': count}
+        except:
+            return {'unread_count': 0}
+    return {'unread_count': 0}
 
 GAMES_CONFIG = {
     "slap": {"name": "Slap Battles", "icon": "🖐️", "currency": "Слепы / R$", "options": ["Перчатка", "Бейдж", "Фарм"], "hint": "Название перчатки"},
@@ -94,6 +112,7 @@ def my_chats():
     user = session['user']
     conn = get_db_connection()
     cur = conn.cursor()
+    # Получаем список всех, с кем переписывались
     cur.execute('SELECT DISTINCT sender FROM chats WHERE recipient = %s UNION SELECT DISTINCT recipient FROM chats WHERE sender = %s', (user, user))
     interlocutors = [row[0] for row in cur.fetchall()]
     cur.close()
@@ -106,6 +125,12 @@ def chat(recipient):
     user = session['user']
     conn = get_db_connection()
     cur = conn.cursor(cursor_factory=RealDictCursor)
+    
+    # 1. Помечаем все входящие от этого человека как прочитанные
+    cur.execute('UPDATE chats SET is_read = TRUE WHERE sender = %s AND recipient = %s', (recipient, user))
+    conn.commit()
+    
+    # 2. Загружаем историю сообщений
     cur.execute('SELECT * FROM chats WHERE (sender = %s AND recipient = %s) OR (sender = %s AND recipient = %s) ORDER BY id', 
                 (user, recipient, recipient, user))
     messages = cur.fetchall()
@@ -121,12 +146,12 @@ def send_message(recipient):
     
     conn = get_db_connection()
     cur = conn.cursor()
-    cur.execute('INSERT INTO chats (sender, recipient, message, time) VALUES (%s, %s, %s, %s)',
+    cur.execute('INSERT INTO chats (sender, recipient, message, time, is_read) VALUES (%s, %s, %s, %s, FALSE)',
                 (session['user'], recipient, msg_text, msg_time))
     conn.commit()
     cur.close()
     conn.close()
-    return jsonify({"from": session['user'], "text": msg_text, "time": msg_time})
+    return jsonify({"sender": session['user'], "message": msg_text, "time": msg_time})
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
