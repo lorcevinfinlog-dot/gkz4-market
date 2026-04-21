@@ -9,7 +9,7 @@ app.secret_key = 'gkz4_ultra_auto_chat'
 # ОБНОВЛЕННАЯ КОНФИГУРАЦИЯ ИГР (Все разделы, о которых ты просил)
 GAMES_CONFIG = {
     "slap": {
-        "name": "Slap Battles", "icon": "🖐️", "currency": "R$", 
+        "name": "Slap Battles", "icon": "🖐️", "currency": "Слепы / R$", 
         "options": ["Перчатка", "Бейдж", "Фарм"], "hint": "Название перчатки"
     },
     "bloxfruits": {
@@ -21,7 +21,7 @@ GAMES_CONFIG = {
         "options": ["Прожить дни", "Геймпас", "Предметы"], "hint": "Кол-во дней или предмет"
     },
     "garden": {
-        "name": "Вырасти Сад", "icon": "🌱", "currency": "Монеты", 
+        "name": "Вырасти Сад", "icon": "🌱", "currency": "Шейкели", 
         "options": ["Редкое семя", "Удобрение", "Аккаунт"], "hint": "Что за растение?"
     },
     "adopt": {
